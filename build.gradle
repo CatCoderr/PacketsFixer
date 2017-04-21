@@ -34,4 +34,7 @@ bukkit {
         authors = ["JustBlender", "CatCoder"]
     }
 }
+tasks.withType(Jar){
+    destinationDir = file("$rootDir")
+}
 sourceCompatibility = 1.8
