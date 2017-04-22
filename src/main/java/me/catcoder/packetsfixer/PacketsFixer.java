@@ -54,10 +54,11 @@ public class PacketsFixer extends JavaPlugin {
         if (!elapsed(PACKET_USAGE.getOrDefault(event.getPlayer(), -1L), 20L)) {
             PACKET_USAGE.put(event.getPlayer(), System.currentTimeMillis());
         } else {
-            event.getPlayer().kickPlayer(ChatColor.translateAlternateColorCodes(
+            getServer().getScheduler().runTask(this, () ->
+                    event.getPlayer().kickPlayer(ChatColor.translateAlternateColorCodes(
                     '&',
                     getConfig().getString("kick-message")
-            ));
+            )));
             event.setCancelled(true);
         }
     }
