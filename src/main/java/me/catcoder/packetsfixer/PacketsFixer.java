@@ -30,6 +30,7 @@ public class PacketsFixer extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
         protocolManager.addPacketListener(new PacketAdapter(this, PacketType.Play.Client.CUSTOM_PAYLOAD) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
