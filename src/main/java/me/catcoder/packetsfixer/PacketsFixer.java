@@ -4,21 +4,12 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.utility.StreamSerializer;
-import com.comphenix.protocol.wrappers.nbt.NbtCompound;
-import com.comphenix.protocol.wrappers.nbt.NbtFactory;
-import com.comphenix.protocol.wrappers.nbt.NbtList;
 import com.google.common.collect.MapMaker;
-import io.netty.buffer.ByteBuf;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -42,7 +33,8 @@ public class PacketsFixer extends JavaPlugin {
         protocolManager.addPacketListener(new PacketAdapter(this, PacketType.Play.Client.CUSTOM_PAYLOAD) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
-                checkForFlood(event);
+                String channel = event.getPacket().getStrings().read(0);
+                if ("MC|BSign".equals(channel) || "MC|BEdit".equals(channel)) checkForFlood(event);
             }
         });
         getServer().getScheduler().runTaskTimer(this, () -> {
@@ -57,39 +49,15 @@ public class PacketsFixer extends JavaPlugin {
     /**
      * @author JustBlender
      */
-    protected void checkForFlood(final PacketEvent event) {
+    private void checkForFlood(final PacketEvent event) {
         if (!elapsed(PACKET_USAGE.getOrDefault(event.getPlayer(), -1L), 20L)) {
             PACKET_USAGE.put(event.getPlayer(), System.currentTimeMillis());
         } else {
-            try {
-                PacketContainer container = event.getPacket();
-                ByteBuf buf = container.getSpecificModifier(ByteBuf.class).read(0);
-                byte[] bytes = new byte[buf.readableBytes()];
-                buf.readBytes(bytes);
-                DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes));
-
-                ItemStack itemStack = StreamSerializer.getDefault().deserializeItemStack(input);
-                if (itemStack == null)
-                    throw new IOException("Unable to deserialize ItemStack");
-
-                NbtCompound root = (NbtCompound) NbtFactory.fromItemTag(itemStack);
-                if (root == null) {
-                    throw new IOException("No NBT tag?!");
-                } else if (!root.containsKey("pages")) {
-                    throw new IOException("No 'pages' NBT compound was found");
-                } else {
-                    NbtList<String> pages = root.getList("pages");
-                    if (pages.size() > 50)
-                        throw new IOException("Too much pages");
-
-                    for (String page : pages)
-                        if (page.length() > 256)
-                            throw new IOException("A very long page");
-                }
-            } catch (IOException ex) {
-                getLogger().warning(event.getPlayer().getName() + " пытается флудить пакетами");
-                event.setCancelled(true);
-            }
+            event.getPlayer().kickPlayer(ChatColor.translateAlternateColorCodes(
+                    '&',
+                    getConfig().getString("kick-message")
+            ));
+            event.setCancelled(true);
         }
     }
 
